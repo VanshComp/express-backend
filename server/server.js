@@ -13,6 +13,13 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
 
+// Temporary endpoint to log client IP
+app.get("/health", (req, res) => {
+  const clientIp = req.ip || req.connection.remoteAddress;
+  console.log("Client IP:", clientIp);
+  res.json({ status: "ok", clientIp: clientIp });
+});
+
 // Connect DB
 const MONGO = process.env.MONGO_URI || 'mongodb://localhost:27017/centura-auth';
 mongoose.connect(MONGO, { useNewUrlParser: true, useUnifiedTopology: true })
