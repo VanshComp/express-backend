@@ -1,18 +1,23 @@
-const mongoose = require('mongoose');
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const axios = require("axios");
+const path = require('path');
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+// Enable CORS for all origins
 app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
+
+// Serve static files (if co-deployed)
+app.use(express.static(path.join(__dirname, 'build')));
 
 // Temporary endpoint to log client IP
 app.get("/health", async (req, res) => {
@@ -28,7 +33,7 @@ app.get("/health", async (req, res) => {
 });
 
 // Connect DB with Stable API and retry logic
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/centura-auth'; // Local dev fallback
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/centura-auth';
 const clientOptions = {
   serverApi: { version: '1', strict: true, deprecationErrors: true },
   useNewUrlParser: true,
@@ -42,7 +47,7 @@ const connectWithRetry = () => {
     .then(() => console.log('MongoDB connected'))
     .catch(err => {
       console.error('Mongo connect error, retrying in 5s:', err);
-      setTimeout(connectWithRetry, 5000); // Retry every 5s
+      setTimeout(connectWithRetry, 5000);
     });
 };
 connectWithRetry();
@@ -69,10 +74,9 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
 
 function signToken(user) {
-  return jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: user._id, email: user.email, name: user.username }, JWT_SECRET, { expiresIn: '7d' });
 }
 
-// Routes
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -116,6 +120,11 @@ app.get('/api/auth/profile', async (req, res) => {
   } catch (err) {
     console.error(err); res.status(401).json({ message: 'Invalid token' });
   }
+});
+
+// Serve frontend (if co-deployed)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 const PORT = process.env.PORT || 4000;
