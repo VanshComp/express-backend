@@ -1,14 +1,14 @@
-const express = require('express');
 const mongoose = require('mongoose');
+const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
+const axios = require("axios");
 
 dotenv.config();
 
 const app = express();
-const axios = require("axios");
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
@@ -27,11 +27,26 @@ app.get("/health", async (req, res) => {
   }
 });
 
-// Connect DB
-const MONGO = process.env.MONGO_URI || 'mongodb://localhost:27017/centura-auth';
-mongoose.connect(MONGO, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('Mongo connect error', err));
+// Connect DB with timeout and retry
+const MONGO = process.env.MONGO_URI || 'mongodb+srv://vanshgautam2005_db_user:Atlas12345@cluster0.gmqjbnb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+mongoose.connect(MONGO, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000, // Faster timeout
+  heartbeatFrequencyMS: 10000,    // Check connection every 10s
+}).then(() => console.log('MongoDB connected'))
+  .catch(err => {
+    console.error('Mongo connect error, exiting:', err);
+    process.exit(1); // Exit if connection fails
+  });
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected, attempting reconnect...');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
 
 // Models
 const UserSchema = new mongoose.Schema({
@@ -82,7 +97,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Protected route example
 app.get('/api/auth/profile', async (req, res) => {
   try {
     const auth = req.headers.authorization;
@@ -97,5 +111,5 @@ app.get('/api/auth/profile', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log('Server listening on', PORT));
