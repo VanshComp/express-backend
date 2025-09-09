@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const axios = require("axios");
-const path = require('path');
+// const path = require('path');
 
 dotenv.config();
 
@@ -17,7 +17,7 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // Serve static files (if co-deployed)
-app.use(express.static(path.join(__dirname, 'build')));
+// app.use(express.static(path.join(__dirname, 'build')));
 
 // Temporary endpoint to log client IP
 app.get("/health", async (req, res) => {
@@ -123,9 +123,9 @@ app.get('/api/auth/profile', async (req, res) => {
 });
 
 // Serve frontend (if co-deployed)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'build', 'index.html'));
+// });
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log('Server listening on', PORT));
