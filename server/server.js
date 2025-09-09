@@ -27,18 +27,25 @@ app.get("/health", async (req, res) => {
   }
 });
 
-// Connect DB with timeout and retry
-const MONGO = process.env.MONGO_URI || 'mongodb+srv://vanshgautam2005_db_user:Atlas12345@cluster0.gmqjbnb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
-mongoose.connect(MONGO, {
+// Connect DB with Stable API and retry logic
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/centura-auth'; // Local dev fallback
+const clientOptions = {
+  serverApi: { version: '1', strict: true, deprecationErrors: true },
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000, // Faster timeout
-  heartbeatFrequencyMS: 10000,    // Check connection every 10s
-}).then(() => console.log('MongoDB connected'))
-  .catch(err => {
-    console.error('Mongo connect error, exiting:', err);
-    process.exit(1); // Exit if connection fails
-  });
+  serverSelectionTimeoutMS: 5000,
+  heartbeatFrequencyMS: 10000,
+};
+
+const connectWithRetry = () => {
+  mongoose.connect(MONGO_URI, clientOptions)
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => {
+      console.error('Mongo connect error, retrying in 5s:', err);
+      setTimeout(connectWithRetry, 5000); // Retry every 5s
+    });
+};
+connectWithRetry();
 
 mongoose.connection.on('disconnected', () => {
   console.log('MongoDB disconnected, attempting reconnect...');
@@ -111,5 +118,5 @@ app.get('/api/auth/profile', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log('Server listening on', PORT));
