@@ -8,16 +8,23 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const app = express();
+const axios = require("axios");
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
 
 // Temporary endpoint to log client IP
-app.get("/health", (req, res) => {
-  const clientIp = req.ip || req.connection.remoteAddress;
-  console.log("Client IP:", clientIp);
-  res.json({ status: "ok", clientIp: clientIp });
+app.get("/health", async (req, res) => {
+  try {
+    const response = await axios.get("https://api.ipify.org?format=json");
+    const externalIp = response.data.ip;
+    console.log("External IP from ipify:", externalIp);
+    res.json({ status: "ok", clientIp: externalIp });
+  } catch (error) {
+    console.error("Error fetching external IP:", error);
+    res.status(500).json({ status: "error", clientIp: "::1" });
+  }
 });
 
 // Connect DB
